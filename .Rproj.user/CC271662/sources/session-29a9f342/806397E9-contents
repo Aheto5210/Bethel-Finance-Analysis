@@ -112,3 +112,4 @@ ggplot(Transtotal, aes(x = month,y = total_month_amount, colour = type))+
 
 
 
+
