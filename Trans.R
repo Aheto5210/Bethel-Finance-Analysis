@@ -106,8 +106,8 @@ ggplot(Transtotal, aes(x = 2, y = total_month_amount, fill = month)) +
   labs(title = "Deposit Amounts by Month") +
   scale_fill_brewer(palette = "Set3") # Use a color palette for the months
 
-ggplot(Transtotal, aes(x = month(), fill = type))+
-  geom_bar()+ theme_bw() + labs(y = "s", title = "s")
+ggplot(Transtotal, aes(x = month,y = total_month_amount, colour = type))+
+  geom_point()+ theme_bw() + labs(y = "s", title = "s")
 
 
 
