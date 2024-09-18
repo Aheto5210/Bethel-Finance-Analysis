@@ -3,12 +3,14 @@ install.packages("tidyverse")
 install.packages("lubridate")
 install.packages("ggplot2")
 install.packages("dplyr")
+install.packages("knitr")
 
 library(dplyr)
 library(tidyverse)
 library(lubridate)
 library(plotly)
 library(ggplot2)
+library(knitr)
 
 
 Transactions <- read.csv("transactions.csv") # Loading the Transactions dataset
@@ -126,7 +128,7 @@ Transtotal_summary <- Transtotal %>%
 # Create the heatmap
 ggplot(Transtotal_summary, aes(x = month, y = type, fill = total_amount)) +
   geom_tile(color = "white") +  # Create the heatmap tiles
-  scale_fill_gradient(low = "white", high = "darkgreen") +  # Color gradient for total amounts
+  scale_fill_gradient(low = "white", high = "navy") +  # Color gradient for total amounts
   labs(title = "Heatmap of Total Deposits and Withdrawals by Month",
        x = "Month",
        y = "Transaction Type",
@@ -167,3 +169,53 @@ ggplot(Transtotal_summary, aes(x = month, y = total_amount_by_type, size = total
          color = "Transaction Type") +
     theme_minimal() +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Rotate x-axis labels for better readability
+
+  # Calculate average, maximum, and minimum for each month and type
+  summary_stats <- Transtotal %>%
+    group_by(month, type) %>%
+    summarize(
+      avg_amount = mean(total_amount_by_type, na.rm = TRUE),
+      max_amount = max(total_amount_by_type, na.rm = TRUE),
+      min_amount = min(total_amount_by_type, na.rm = TRUE),
+      .groups = 'drop'
+    ) %>%
+    pivot_longer(cols = starts_with("avg_amount"):starts_with("min_amount"),
+                 names_to = "statistic",
+                 values_to = "value") %>%
+    mutate(statistic = factor(statistic, levels = c("avg_amount", "max_amount", "min_amount"),
+                              labels = c("Average", "Maximum", "Minimum")))
+  
+  # Calculate average, maximum, and minimum for each month and type
+  summary_stats <- Transtotal %>%
+    group_by(month, type) %>%
+    summarize(
+      avg_amount = mean(total_amount_by_type, na.rm = TRUE),
+      max_amount = max(total_amount_by_type, na.rm = TRUE),
+      min_amount = min(total_amount_by_type, na.rm = TRUE),
+      .groups = 'drop'
+    )
+  
+  # Prepare data for table display
+  summary_table <- summary_stats %>%
+    pivot_longer(cols = starts_with("avg_amount"):starts_with("min_amount"),
+                 names_to = "statistic",
+                 values_to = "value") %>%
+    mutate(statistic = factor(statistic, levels = c("avg_amount", "max_amount", "min_amount"),
+                              labels = c("Average", "Maximum", "Minimum"))) %>%
+    pivot_wider(names_from = statistic, values_from = value) %>%
+    arrange(month, type)
+  
+  # Display the table using kable
+  kable(summary_table, caption = "Summary Statistics for Withdrawals and Deposits per Month")
+  
+  
+ 
+  
+  
+  
+  
+  
+  
+  
+  
+  
