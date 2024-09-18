@@ -118,9 +118,13 @@ plot_ly(Transtotal_summary, labels = ~type, values = ~total_amount, type = 'pie'
          xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
          yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
 
+Transtotal_summary <- Transtotal %>%
+  group_by(month, type) %>%
+  summarize(total_amount = sum(total_amount_by_type, na.rm = TRUE), .groups = 'drop')
+
 
 # Create the heatmap
-ggplot(Transtotal_summary, aes(y = month, x = type, fill = total_amount)) +
+ggplot(Transtotal_summary, aes(x = month, y = type, fill = total_amount)) +
   geom_tile(color = "white") +  # Create the heatmap tiles
   scale_fill_gradient(low = "white", high = "darkgreen") +  # Color gradient for total amounts
   labs(title = "Heatmap of Total Deposits and Withdrawals by Month",
@@ -130,13 +134,15 @@ ggplot(Transtotal_summary, aes(y = month, x = type, fill = total_amount)) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Rotate x-axis labels for better readability
 
+
+# bubble chart
 Transtotal_summary <- Transtotal %>%
   group_by(month, type) %>%
   summarize(total_amount_by_type = sum(total_amount_by_type, na.rm = TRUE), .groups = 'drop')
 
-# bubble chart
+# Create the bubble chart
 ggplot(Transtotal_summary, aes(x = month, y = total_amount_by_type, size = total_amount_by_type, color = type, fill = type)) +
-  geom_point(alpha = 0.7, shape = 21, stroke = 1.5) +  bubbles with fill
+  geom_point(alpha = 0.7, shape = 21, stroke = 1.5) +  # Create the bubbles with fill
   scale_size_continuous(range = c(5, 20)) +  # Adjust bubble sizes based on total_amount_by_type
   scale_color_manual(values = c("Deposit" = "blue", "Withdraw" = "red")) +  # Custom bubble border colors
   scale_fill_manual(values = c("Deposit" = "lightblue", "Withdraw" = "lightcoral")) +  # Custom bubble fill colors
@@ -151,8 +157,13 @@ ggplot(Transtotal_summary, aes(x = month, y = total_amount_by_type, size = total
 
 
 
-
-
-
-
-
+  ggplot(Transtotal_summary, aes(x = month, y = total_amount_by_type, color = type)) +
+    geom_point(size = 3) +  # Create scatter plot points
+    geom_smooth(method = "lm", se = FALSE, aes(group = type)) +  # Add a line of best fit without confidence interval
+    scale_color_manual(values = c("Deposit" = "blue", "Withdraw" = "red")) +  # Custom colors for points and lines
+    labs(title = "Scatter Plot with Line of Best Fit for Deposits and Withdrawals",
+         x = "Month",
+         y = "Total Amount",
+         color = "Transaction Type") +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Rotate x-axis labels for better readability
