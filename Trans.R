@@ -1,9 +1,13 @@
-library(readr)
-library(readxl)
+install.packages("plotly")
+install.packages("tidyverse")
+install.packages("lubridate")
+install.packages("ggplot2")
+install.packages("dplyr")
+
 library(dplyr)
 library(tidyverse)
 library(lubridate)
-
+library(plotly)
 library(ggplot2)
 
 
@@ -46,28 +50,38 @@ ggplot(Transd, aes(x = month, y = amount, fill = type)) +
        x = "Month",
        y = "Amount")+
   theme_bw() +
-  scale_fill_manual(values = c("Deposit" = "navy", "Withdraw" = "orange"))
+  scale_fill_manual(values = c("Deposit" = "darkblue", "Withdraw" = "darkred"))
 
 # Sum the transactions
 Transum <- Transd %>%
   group_by(month, type) %>%
   summarize(total_amount = sum(amount), .groups = 'drop')
 
-# Calculate the total amount for each month and percentage of each transaction type
-Transum <- Transto %>%
+#total amount for each month and percentage of each transaction type
+Transtotal <- Transum %>%
   group_by(month) %>%
   mutate(total_month_amount = sum(total_amount)) %>%
   ungroup() %>%
   mutate(percentage = (total_amount / total_month_amount) * 100)
 
-Transum
-Transtotal <- Transum %>% # Assigned Transactions to Transd
-  select(total_month_amount, type, month ) %>% # Selected the preferred columns
-  mutate(
-    Total_Deposit = ifelse(type == "Deposit", total_month_amount, NA),
-    Total_withdrawal = ifelse(type == "Withdraw", total_month_amount, NA)
-  )
+#the total deposits and withdrawals grouped by month
+Transtotal <- Transum %>%
+  group_by(month) %>%
+  mutate(total_month_amount = sum(total_amount)) %>%
+  ungroup() %>%
+  mutate(percentage = (total_amount / total_month_amount) * 100) %>%
+  group_by(month, type) %>%
+  summarize(total_amount_by_type = sum(total_amount), .groups = 'drop')  # Summarize by type
 
+#stacked line chart with markers
+ggplot(Transtotal, aes(x = month, y = total_amount_by_type, color = type, group = type)) +
+  geom_line(size = 1) +  # Line size for deposits and withdrawals
+  geom_point(size = 3) +  # Markers for deposits and withdrawals
+  labs(title = "Total Deposits and Withdrawals by Month", 
+       y = "Total Amount", 
+       x = "Month") +
+  scale_color_manual(values = c("Deposit" = "blue", "Withdraw" = "red")) +  # Custom colors
+  theme_minimal()  # Clean theme
 
 ggplot(Transum, aes(x = "", y = total_amount, fill = type)) +
   geom_bar(stat = "identity", width = 1) +
@@ -77,37 +91,66 @@ ggplot(Transum, aes(x = "", y = total_amount, fill = type)) +
   scale_fill_manual(values = c("Deposit" = "navy", "Withdraw" = "orange"))
 
 
-
-
-
 transd_depsum <- Transd %>%
   filter(type == "deposit") %>%
   group_by(month) %>%
   summarize(deposit_amount = sum(amount), .groups = 'drop')
 
-Transd
 
-# doughnut plot to show total deposit amount
-ggplot(Transtotal, aes(x = 2, y = Total_Deposit, fill = month)) +
-  geom_bar(stat = "identity", width = 1) +
-  coord_polar(theta = "y") +
-  xlim(0.5, 2.5) +  # This creates the hole in the middle
-  theme_void() +  # Remove all background and axis elements
-  labs(title = "Deposit Amounts by Month") +
-  scale_fill_brewer(palette = "Set3") # Use a color palette for the months
+# Summarize the data for deposits and withdrawals
+Transtotal_summary <- Transtotal %>%
+  group_by(type) %>%
+  summarize(total_amount = sum(total_amount_by_type, na.rm = TRUE), .groups = 'drop')
 
-#  doughnut plot to show the total of both desposit and withdrawal amount
-ggplot(Transtotal, aes(x = 2, y = total_month_amount, fill = month)) +
-  geom_bar(stat = "identity", width = 1) +
-  coord_polar(theta = "y") +
-  facet_wrap(~type)+
-  xlim(0.5, 2.5) +  # This creates the hole in the middle
-  theme_void() +  # Remove all background and axis elements
-  labs(title = "Deposit Amounts by Month") +
-  scale_fill_brewer(palette = "Set3") # Use a color palette for the months
+# Create the plotly 3D doughnut chart
+plot_ly(Transtotal_summary, labels = ~type, values = ~total_amount, type = 'pie',
+        hole = 0.6,  # Creates the doughnut hole
+        textinfo = 'label+percent',  # Show both the label and percentage
+        hoverinfo = 'label+value+percent',  # Show value on hover
+        marker = list(colors = c('navy', 'orange'), line = list(color = '#FFFFFF', width = 2))) %>%
+  layout(title = "Total Deposits and Withdrawals",
+         showlegend = TRUE,
+         annotations = list(
+           text = "Total Transactions",  # Center label inside doughnut
+           showarrow = FALSE,
+           font = list(size = 20)
+         ),
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
 
-ggplot(Transtotal, aes(x = month,y = total_month_amount, colour = type))+
-  geom_point()+ theme_bw() + labs(y = "s", title = "s")
+
+# Create the heatmap
+ggplot(Transtotal_summary, aes(y = month, x = type, fill = total_amount)) +
+  geom_tile(color = "white") +  # Create the heatmap tiles
+  scale_fill_gradient(low = "white", high = "darkgreen") +  # Color gradient for total amounts
+  labs(title = "Heatmap of Total Deposits and Withdrawals by Month",
+       x = "Month",
+       y = "Transaction Type",
+       fill = "Total Amount") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Rotate x-axis labels for better readability
+
+Transtotal_summary <- Transtotal %>%
+  group_by(month, type) %>%
+  summarize(total_amount_by_type = sum(total_amount_by_type, na.rm = TRUE), .groups = 'drop')
+
+# bubble chart
+ggplot(Transtotal_summary, aes(x = month, y = total_amount_by_type, size = total_amount_by_type, color = type, fill = type)) +
+  geom_point(alpha = 0.7, shape = 21, stroke = 1.5) +  bubbles with fill
+  scale_size_continuous(range = c(5, 20)) +  # Adjust bubble sizes based on total_amount_by_type
+  scale_color_manual(values = c("Deposit" = "blue", "Withdraw" = "red")) +  # Custom bubble border colors
+  scale_fill_manual(values = c("Deposit" = "lightblue", "Withdraw" = "lightcoral")) +  # Custom bubble fill colors
+  labs(title = "Bubble Chart of Total Deposits and Withdrawals by Month",
+       x = "Month",
+       y = "Total Amount",
+       size = "Total Amount",
+       fill = "Transaction Type",
+       color = "Transaction Type") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Rotate x-axis labels for better readability
+
+
+
 
 
 
